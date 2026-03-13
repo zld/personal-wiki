@@ -1,5 +1,16 @@
 
 ## Weak 引用核心数据结构
+两层哈希结构:
+```sh
+SideTables (全局哈希表，分了64个 SideTable，按对象地址取模分片)
+  └── SideTable
+        └── weak_table_t（哈希表）
+              └── weak_entry_t（存该对象所有 weak 指针地址的数组）
+```
+
+**为什么分64个 SideTable？**
+
+减少锁竞争。每个 SideTable 有自己的 spinlock，多线程操作不同对象时不会都卡在同一把锁上。
 
 ### 1. weak_referrer_t
 
@@ -151,6 +162,16 @@ flowchart TD
 ```
 
 ## 对象释放时 weak 清理流程
+
+```sh
+release
+  → dealloc
+    → _objc_rootDealloc
+      → object_dispose
+        → objc_destructInstance
+          → clearDeallocating
+            → weak_clear_no_lock
+```
 
 ```mermaid
 flowchart TD
